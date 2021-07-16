@@ -10,5 +10,6 @@ FREEZE = True
 OUTPUT_DIM = 64
 
 # train config
+MARGIN = 1.
 NUM_PROCESSES = 4
 MAX_EPOCH = 30
