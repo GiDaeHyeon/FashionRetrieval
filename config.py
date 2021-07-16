@@ -8,3 +8,7 @@ CLASS_NUM = 14
 PRETRAINED = True
 FREEZE = True
 OUTPUT_DIM = 64
+
+# train config
+NUM_PROCESSES = 4
+MAX_EPOCH = 30
