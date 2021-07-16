@@ -34,15 +34,15 @@ class TripletModel(nn.Module):
                  output_dim=OUTPUT_DIM
                  ):
         super(TripletModel, self).__init__()
-        self.classification_model = resnext50_32x4d(pretrained=pretrained)
+        self.cnn_model = resnext50_32x4d(pretrained=pretrained)
 
         if freeze:
-            for parameter in self.classification_model.parameters():
+            for parameter in self.cnn_model.parameters():
                 parameter.requires_grad = False
 
-        in_features = self.classification_model.fc.in_features
+        in_features = self.cnn_model.fc.in_features
 
-        self.classification_model.fc = nn.Sequential(
+        self.cnn_model.fc = nn.Sequential(
             nn.Linear(in_features, 1024),
             nn.Linear(1024, 512),
             nn.Linear(512, 256),
@@ -50,10 +50,11 @@ class TripletModel(nn.Module):
         )
 
     def forward(self, anchor, positive, negative):
-        anchor = self.classification_model(anchor)
-        positive = self.classification_model(positive)
-        negative = self.classification_model(negative)
+        # TODO : 여기에서 augmentation을 수행해줘도 괜찮을까요?
+        anchor = self.cnn_model(anchor)
+        positive = self.cnn_model(positive)
+        negative = self.cnn_model(negative)
         return anchor, positive, negative
 
     def extract_feature(self, x):
-        return self.classification_model(x)
+        return self.cnn_model(x)
