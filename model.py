@@ -1,10 +1,17 @@
-import segmentation_models_pytorch as smp
+import torch
+from torch import nn, optim
 
-import torch.nn as nn
 from torchvision.models import resnext50_32x4d
+
+import segmentation_models_pytorch as smp
+import pytorch_lightning as pl
 
 from config import *
 
+
+###################
+# Image Segmentatin
+###################
 
 class SegmentationModel(nn.Module):
     def __init__(self,
@@ -25,6 +32,43 @@ class SegmentationModel(nn.Module):
     def forward(self, x):
         return self.segmentation_model(x)
 
+
+class SegmentationNetwork(pl.LightningModule):
+    def __init__(self):
+        super(SegmentationNetwork, self).__init__()
+        self.model = SegmentationModel()
+        self.loss_fn = smp.losses.SoftCrossEntropyLoss()
+
+    def forward(self, x):
+        output = self.model(x)
+        return output
+
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.1, last_epoch=-1, verbose=True)
+        return [optimizer], [scheduler]
+
+    def training_step(self, batch, batch_idx):
+        image, mask = batch
+        output = self(image)
+        loss = self.loss_fn(mask, output)
+        self.log('train_loss', loss)
+        return {'loss': loss}
+
+    def validation_step(self, batch, batch_idx):
+        image, mask = batch
+        output = self(image)
+        loss = self.loss_fn(mask, output)
+        self.log('val_loss', loss)
+        return {'val_loss': loss}
+
+    def get_mask(self, x):
+        return self(x)
+
+
+###################
+# Metric Learning
+###################
 
 class TripletModel(nn.Module):
     def __init__(self,
@@ -49,10 +93,37 @@ class TripletModel(nn.Module):
             nn.Linear(256, output_dim)
         )
 
-    def forward(self, batch):
-        # TODO : 여기에서 augmentation을 수행해줘도 괜찮을까요?
-        embedding = [self.cnn_model(data) for data in batch]
-        return embedding
+    def forward(self, x):
+        return self.cnn_model(x)
+
+
+class TripletNetwork(pl.LightningModule):
+    def __init__(self,
+                 margin=MARGIN):
+        super(TripletNetwork, self).__init__()
+        self.model = TripletModel()
+        self.loss_fn = torch.nn.TripletMarginLoss(margin, )
+
+    def forward(self, x):
+        output = self.model(x)
+        return output
+
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.1, last_epoch=-1, verbose=True)
+        return [optimizer], [scheduler]
+
+    def training_step(self, batch, batch_idx):
+        anchor, positive, negative = [self(data) for data in batch[0]]
+        loss = self.loss_fn(anchor, positive, negative)
+        self.log('train_loss', loss)
+        return {'loss': loss}
+
+    def validation_step(self, batch, batch_idx):
+        anchor, positive, negative = [self(data) for data in batch[0]]
+        loss = self.loss_fn(anchor, positive, negative)
+        self.log('val_loss', loss)
+        return {'val_loss': loss}
 
     def extract_feature(self, x):
-        return self.cnn_model(x)
+        return self.model(x)
