@@ -49,12 +49,10 @@ class TripletModel(nn.Module):
             nn.Linear(256, output_dim)
         )
 
-    def forward(self, anchor, positive, negative):
+    def forward(self, batch):
         # TODO : 여기에서 augmentation을 수행해줘도 괜찮을까요?
-        anchor = self.cnn_model(anchor)
-        positive = self.cnn_model(positive)
-        negative = self.cnn_model(negative)
-        return anchor, positive, negative
+        embedding = [self.cnn_model(data) for data in batch]
+        return embedding
 
     def extract_feature(self, x):
         return self.cnn_model(x)
