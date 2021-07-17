@@ -36,7 +36,6 @@ TRANSFORM = albumentations.Compose([
                                     ])
 
 
-
 # Triplet model config
 PRETRAINED = True
 FREEZE = True
