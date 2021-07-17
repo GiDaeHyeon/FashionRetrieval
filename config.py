@@ -1,4 +1,5 @@
 import albumentations
+from albumentations.pytorch import ToTensorV2
 
 
 VERSION = 'version1'
@@ -32,7 +33,7 @@ TRANSFORM = albumentations.Compose([
                                                           albumentations.RandomRotate90(p=1),
                                                           albumentations.VerticalFlip(p=1)
                                                          ], p=1),
-                                    albumentations.pytorch.ToTensor()
+                                    ToTensorV2(),
                                     ])
 
 
