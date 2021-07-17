@@ -4,8 +4,8 @@ import albumentations
 VERSION = 'version1'
 
 # common config
-DATA_DIR = './dataset/'
-CKPT_DIR = './checkpoint/'
+DATA_DIR = '../dataset/'
+CKPT_DIR = './checkpoints/segmentation/'
 CKPT_NAME = f'{VERSION}_checkpoint'
 BATCH_SIZE = 32
 NUM_WORKERS = 8
