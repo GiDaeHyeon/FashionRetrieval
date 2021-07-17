@@ -4,16 +4,16 @@ import albumentations
 VERSION = 'version1'
 
 # common config
-DATA_DIR = 'data dir'
-CKPT_DIR = 'checkpoint dir'
-CKPT_NAME = 'checkpoint filename'
+DATA_DIR = './dataset/'
+CKPT_DIR = './checkpoint/'
+CKPT_NAME = f'{VERSION}_checkpoint'
 BATCH_SIZE = 32
 NUM_WORKERS = 8
 MAX_EPOCH = 50
 GPUS = [0, 1, 2, 3]
 
 # segmentation model config
-SEG_ENCODER = 'resnet101'
+SEG_ENCODER = 'resnet50'
 SEG_ENCODER_DEPTH = 5
 SEG_ENCODER_WEIGHT = 'imagenet'
 CLASS_NUM = 14
