@@ -5,7 +5,7 @@ from albumentations.pytorch import ToTensorV2
 VERSION = 'version1'
 
 # common config
-DATA_DIR = '../dataset/'
+DATA_DIR = '../datasets/deepfashion2/'
 CKPT_DIR = './checkpoints/segmentation/'
 CKPT_NAME = f'{VERSION}_checkpoint'
 BATCH_SIZE = 32
