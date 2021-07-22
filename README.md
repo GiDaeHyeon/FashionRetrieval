@@ -12,9 +12,11 @@ Deepfashion2 데이터셋을 활용했다.
 
 ## Requirements
 ```
-pytorch
+torch
 torchvision
 pytorch-lightning
 segmentation-models-pytorch
+albumentations
+opencv-python
 ```
 자세한 사항은 레포지토리 내 requirements.txt 참고바람.
