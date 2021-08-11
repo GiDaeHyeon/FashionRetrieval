@@ -15,14 +15,13 @@ class SegmentationDataset(Dataset):
                  transform_mode='train'):
         self.transform = segmentation_transform(mode=transform_mode)
         self.images = sorted(os.listdir(directory + '/image'))
-        self.masks = sorted(os.listdir(directory + '/mask'))
+        self.masks = sorted(os.listdir(directory + '/mask2'))
 
-        assert len(self.images) == len(self.masks),\
-            '데이터셋 점검이 필요합니다.(inconsistency between images and masks)'
+        assert len(self.images) == len(self.masks),'데이터셋 점검이 필요합니다.(inconsistency between images and masks)'
 
     def __getitem__(self, index):
         image = Image.open(self.images[index])
-        mask = np.load(self.masks[index])
+        mask = Image.open(self.masks[index])
 
         if self.transform is not None:
             augmented = self.transform(image=image,
