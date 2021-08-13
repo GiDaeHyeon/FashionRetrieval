@@ -1,14 +1,19 @@
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+from torchvision.datasets import ImageFolder
 import numpy as np
 
+import pytorch_lightning as pl
+
 from transform import triplet_transform
+
+from config import *
 
 
 class TripletsDataset(Dataset):
     def __init__(self,
-                 dataset,
+                 directory,
                  transform=triplet_transform):
-        self.dataset = dataset
+        self.dataset = ImageFolder(directory)
         self.transform = transform
         self.labels = np.array(self.dataset.targets)
         self.images = self.dataset
@@ -29,11 +34,39 @@ class TripletsDataset(Dataset):
         neg_label = self.labels[negative_index]
 
         if self.transform is not None:
-            anc_img = self.transform(image=anc_img)['image']
-            pos_img = self.transform(image=pos_img)['image']
-            neg_img = self.transform(image=neg_img)['image']
+            anc_img = self.transform(anc_img)
+            pos_img = self.transform(pos_img)
+            neg_img = self.transform(neg_img)
 
         return (anc_img, pos_img, neg_img), (anc_label, pos_label, neg_label)
 
     def __len__(self):
         return len(self.dataset)
+
+
+class TripletDataModule(pl.LightningDataModule):
+    def __init__(self,
+                 batch_size=BATCH_SIZE,
+                 num_workers=NUM_WORKERS):
+        super(TripletDataModule, self).__init__()
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+    def train_dataloader(self):
+        dataset = TripletsDataset(directory=f'{DATA_DIR}/train/clothes/')
+        return DataLoader(dataset=dataset,
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers,
+                          shuffle=True,
+                          pin_memory=True,
+                          drop_last=True)
+
+    def val_dataloader(self):
+        dataset = TripletsDataset(directory=f'{DATA_DIR}/validation/clothes/')
+        return DataLoader(dataset=dataset,
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers,
+                          shuffle=False,
+                          pin_memory=True,
+                          drop_last=True)
+

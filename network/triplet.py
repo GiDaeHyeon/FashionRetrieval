@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.optim as optim
 
-from torchvision.models import resnext50_32x4d
+from torchvision.models import resnet50
 
 import pytorch_lightning as pl
 
@@ -16,7 +16,7 @@ class TripletNetwork(pl.LightningModule):
                  output_dim=OUTPUT_DIM
                  ):
         super(TripletNetwork, self).__init__()
-        self.model = resnext50_32x4d(pretrained=pretrained)
+        self.model = resnet50(pretrained=pretrained)
 
         if freeze:
             for parameter in self.model.parameters():
@@ -25,10 +25,9 @@ class TripletNetwork(pl.LightningModule):
         in_features = self.model.fc.in_features
 
         self.model.fc = nn.Sequential(
-            nn.Linear(in_features, 1024),
-            nn.Linear(1024, 512),
-            nn.Linear(512, 256),
-            nn.Linear(256, output_dim)
+            nn.Linear(in_features, 512),
+            nn.LeakyReLU(),
+            nn.Linear(512, output_dim)
         )
 
         self.loss_fn = nn.TripletMarginLoss(margin=margin)
