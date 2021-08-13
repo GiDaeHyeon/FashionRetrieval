@@ -1,33 +1,42 @@
-import os
-from PIL import Image
+import torch
+from glob import glob
+import cv2
 import numpy as np
 
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 
-from transform import segmentation_transform
-from ..config import *
+from config import *
+from torchvision.transforms import Normalize, ToTensor
 
 
 class SegmentationDataset(Dataset):
     def __init__(self,
-                 directory,
-                 transform_mode='train'):
-        self.transform = segmentation_transform(mode=transform_mode)
-        self.images = sorted(os.listdir(directory + '/image'))
-        self.masks = sorted(os.listdir(directory + '/mask2'))
+                 directory):
+        self.Normalize = Normalize(mean=[.485, .456, .406],
+                                   std=[.229, .224, .225])
+        self.ToTensor = ToTensor()
+        self.images = sorted(glob(directory + '/image/*.jpg'))
+        self.masks = sorted(glob(directory + '/mask2/*.png'))
 
-        assert len(self.images) == len(self.masks),'데이터셋 점검이 필요합니다.(inconsistency between images and masks)'
+        assert len(self.images) == len(self.masks), \
+            f'데이터셋 점검이 필요합니다.(inconsistency between images({len(self.images)}) ' \
+            f'and masks({len(self.masks)}))'
 
     def __getitem__(self, index):
-        image = Image.open(self.images[index])
-        mask = Image.open(self.masks[index])
+        image = cv2.imread(self.images[index], cv2.IMREAD_COLOR)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE)
 
-        if self.transform is not None:
-            augmented = self.transform(image=image,
-                                       mask=mask)
+        assert self.images[index].split('/')[-1].split('.')[0] == self.masks[index].split('/')[-1].split('.')[0], '데이터셋에 이상이 있습니다.'
 
-        return augmented['image'], augmented['mask']
+        image, mask = cv2.resize(image, dsize=[512, 512], interpolation=cv2.INTER_NEAREST), \
+        cv2.resize(mask,  dsize=[512, 512], interpolation=cv2.INTER_NEAREST)
+
+        image, mask = self.ToTensor(image), torch.Tensor(mask).type(torch.int)
+        image = self.Normalize(image)
+
+        return image, mask
 
     def __len__(self):
         return len(self.images)
@@ -35,25 +44,26 @@ class SegmentationDataset(Dataset):
 
 class SegmentationDataModule(pl.LightningDataModule):
     def __init__(self,
-                 batch_size=BATCH_SIZE):
+                 batch_size=BATCH_SIZE,
+                 num_workers=NUM_WORKERS):
         super(SegmentationDataModule, self).__init__()
         self.batch_size = batch_size
+        self.num_workers = num_workers
 
     def train_dataloader(self):
-        dataset = SegmentationDataset(directory=f'{DATA_DIR}/train',
-                                      transform_mode='train')
+        dataset = SegmentationDataset(directory=f'{DATA_DIR}/train')
         return DataLoader(dataset=dataset,
-                          batch_size=BATCH_SIZE,
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers,
                           shuffle=True,
                           pin_memory=True,
                           drop_last=True)
 
     def val_dataloader(self):
-        dataset = SegmentationDataset(directory=f'{DATA_DIR}/validation',
-                                      transform_mode='val')
+        dataset = SegmentationDataset(directory=f'{DATA_DIR}/validation')
         return DataLoader(dataset=dataset,
-                          batch_size=BATCH_SIZE,
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers,
                           shuffle=False,
                           pin_memory=True,
                           drop_last=True)
-

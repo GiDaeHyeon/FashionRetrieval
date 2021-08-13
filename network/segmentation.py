@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 
 import torchmetrics
 
-from ..config import *
+from config import *
 
 
 class SegmentationNetwork(pl.LightningModule):
@@ -14,17 +14,19 @@ class SegmentationNetwork(pl.LightningModule):
                  seg_encoder=SEG_ENCODER,
                  seg_encoder_depth=SEG_ENCODER_DEPTH,
                  seg_encoder_weight=SEG_ENCODER_WEIGHT,
-                 classes_num=CLASS_NUM
+                 classes=CLASSES
                  ):
         super(SegmentationNetwork, self).__init__()
         self.model = smp.DeepLabV3Plus(
             encoder_name=seg_encoder,
             encoder_depth=seg_encoder_depth,
             encoder_weights=seg_encoder_weight,
-            classes=classes_num
+            classes=len(classes),
+            activation='softmax'
         )
-        self.loss_fn = smp.losses.SoftCrossEntropyLoss()
-        self.metrics = torchmetrics.IoU(num_classes=CLASS_NUM)
+        self.loss_fn = smp.losses.DiceLoss(mode='multiclass',
+                                           classes=len(classes))
+        self.metrics = torchmetrics.IoU(num_classes=len(classes))
 
     def forward(self, x):
         return self.model(x)
@@ -37,27 +39,25 @@ class SegmentationNetwork(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         image, mask = batch
         output = self(image)
-        loss = self.loss_fn(mask, output)
-        self.log('train_loss_step', loss)
-        self.log('train_IoU_step', self.metrics(output, mask))
+        loss = self.loss_fn(output, mask.long())
+        self.log('train_loss_step', loss, on_step=True)
+        self.log('train_loss_epoch', loss, on_step=False, on_epoch=True)
+        self.log('train_IoU_step', self.metrics(preds=output, target=mask))
         return {'loss': loss}
 
-    def training_epoch_end(self, outputs):
-        losses = torch.cat([loss for loss in outputs['loss']])
-        self.log('train_loss_epoch', torch.mean(losses))
+    def training__epoch_end(self, outputs):
         self.log('train_IoU_epoch', self.metrics.compute())
 
     def validation_step(self, batch, batch_idx):
         image, mask = batch
         output = self(image)
-        loss = self.loss_fn(mask, output)
-        self.metrics(output, mask)
+        loss = self.loss_fn(output, mask.long())
+        self.log('val_loss', loss, on_step=False, on_epoch=True)
+        self.metrics(preds=output, target=mask)
         return {'val_loss': loss}
 
     def validation_epoch_end(self, outputs):
-        losses = torch.cat([loss for loss in outputs['val_loss']])
-        self.log('val_loss_epoch', torch.mean(losses))
-        self.log('val_IoU_epoch', self.metrics.compute())
+        self.log('val_IoU', self.metrics.compute())
 
     def get_mask(self, x):
         return self(x)
